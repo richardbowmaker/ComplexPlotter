@@ -12,17 +12,32 @@ namespace ComplexPlotter
     abstract class Shape
     {
         public abstract List<ComplexO> Values();
-        public abstract bool CanSelect(PointD p, double xtol, double ytol);
 
-        public abstract void Draw(PlotterGraphics g);
+        public virtual bool CursorIsOn(PlotterGraphics pg, Point p, int xtol, int ytol) { return false; }
+        public virtual void Select(PlotterGraphics pg) { }
+
+        public virtual void Deselect(PlotterGraphics pg)
+        {
+            if (Selected)
+            {
+                Selected = false;
+                Draw(pg);
+            }
+        }
+        public virtual void Move(PlotterGraphics pg, Point offset) { }
+
+        public bool Selected { get; protected set; }
+
+        public virtual void Draw(PlotterGraphics g) { }
     }
 
+    // line shape, in screen co-ordinates
     class Line : Shape
     {
-        private PointD _p0;
-        private PointD _p1;
+        private Point _p0;
+        private Point _p1;
 
-        public Line(PointD p0, PointD p1)
+        public Line(Point p0, Point p1)
         {
             _p0 = p0;
             _p1 = p1;
@@ -31,28 +46,24 @@ namespace ComplexPlotter
         public override List<ComplexO> Values()
         {
             List<ComplexO> values = new List<ComplexO>();
-            values.Add(new ComplexO(_p0));
-            values.Add(new ComplexO(_p1));
             return values;
         }
 
-        public override void Draw(PlotterGraphics g)
+        public override void Draw(PlotterGraphics pg)
         {
-            g.DrawLineV(_p0, _p1);
+            if (Selected)
+                pg.DrawLineC(_p0, _p1, pg.DoublePen());
+            else
+                pg.DrawLineC(_p0, _p1, pg.NarrowPen());
         }
 
-        public override bool CanSelect(PointD p, double xtol, double ytol)
+        public override bool CursorIsOn(PlotterGraphics pg, Point p, int xtol, int ytol)
         {
-            return IsNear(p, xtol, ytol);
-        }
-
-        private bool IsNear(PointD p, double xtol, double ytol)
-        {
-            Complex pc = new Complex(p.X, p.Y);
-            Complex c0 = new Complex(_p0.X, _p0.Y);
-            Complex c1 = new Complex(_p1.X, _p1.Y);
-            Complex xt = new Complex(xtol, 0);
-            Complex yt = new Complex(0, ytol);
+            Complex pc = new Complex((double)p.X, (double)p.Y);
+            Complex c0 = new Complex((double)_p0.X, (double)_p0.Y);
+            Complex c1 = new Complex((double)_p1.X, (double)_p1.Y);
+            Complex xt = new Complex((double)xtol, 0.0);
+            Complex yt = new Complex(0.0, (double)ytol);
 
             // make c0 the left most point, i.e. c0 has smallest real value
             if (c0.Real > c1.Real)
@@ -78,9 +89,22 @@ namespace ComplexPlotter
             // is pp within tolerance of the line c0 (origin) to c1p
             return pp.Real > -dxp && pp.Real < c1p.Real + dxp &&
                    pp.Imaginary > -dyp && pp.Imaginary < c1p.Imaginary + dyp;
+
+        }
+
+        public override void Select(PlotterGraphics pg)
+        {
+            Selected = true;
+            Draw(pg);
+        }
+
+        public override void Move(PlotterGraphics pg, Point offset)
+        {
+            _p0 = new Point(_p0.X + offset.X, _p0.Y + offset.Y);
+            _p1 = new Point(_p1.X + offset.X, _p1.Y + offset.Y);
+            Draw(pg);
         }
     }
-
 
     // a set of disconnected lines
     class Lines : Shape
@@ -92,13 +116,13 @@ namespace ComplexPlotter
             _lines = new List<Line>();
         }
 
-        public Lines(PointD p1, PointD p2)
+        public Lines(Point p1, Point p2)
         {
             _lines = new List<Line>();
             Add(p1, p2);
         }
 
-        public void Add(PointD p1, PointD p2)
+        public void Add(Point p1, Point p2)
         {
             _lines.Add(new Line(p1, p2));
         }
@@ -114,33 +138,53 @@ namespace ComplexPlotter
             foreach (Line l in _lines) l.Draw(g);
         }
 
-        public override bool CanSelect(PointD p, double xtol, double ytol)
+        public override bool CursorIsOn(PlotterGraphics pg, Point p, int xtol, int ytol)
         {
             foreach (Line l in _lines)
-                if (l.CanSelect(p, xtol, ytol)) return true;
+                if (l.CursorIsOn(pg, p, xtol, ytol)) return true;
             return false;
+        }
+
+        public override void Select(PlotterGraphics pg)
+        {
+            foreach (Line l in _lines) l.Select(pg);
+            Selected = true;
+        }
+        public override void Deselect(PlotterGraphics pg)
+        {
+            foreach (Line l in _lines) l.Deselect(pg);
+            Selected = false;
+        }
+
+        public override void Move(PlotterGraphics pg, Point offset)
+        {
+            foreach (Line l in _lines) l.Move(pg, offset);
         }
     }
 
     class Grid : Lines
     {
         public Grid(
-            double xmin, double xmax, int xsteps,
-            double ymin, double ymax, int ysteps)
+            int xmin, int xmax, int xsteps,
+            int ymin, int ymax, int ysteps)
         {
-            double xd = (xmax - xmin) / (double)xsteps;
-            double x = xmin;
+            int xd = (xmax - xmin) / xsteps;
+            int x = xmin;
+            xmax = xmin + xsteps * xd;
+
+            int yd = (ymax - ymin) / ysteps;
+            int y = ymin;
+            ymax = ymin + ysteps * yd;
+
             for (int i = 0; i <= xsteps; i++)
             {
-                Add(new PointD(x, ymin), new PointD(x, ymax));
+                Add(new Point(x, ymin), new Point(x, ymax));
                 x += xd;
             }
 
-            double yd = (ymax - ymin) / (double)ysteps;
-            double y = ymin;
             for (int i = 0; i <= ysteps; i++)
             {
-                Add(new PointD(xmin, y), new PointD(xmax, y));
+                Add(new Point(xmin, y), new Point(xmax, y));
                 y += yd;
             }
         }

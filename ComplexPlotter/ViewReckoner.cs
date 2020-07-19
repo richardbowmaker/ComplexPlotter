@@ -29,7 +29,7 @@ namespace ComplexPlotter
         public double VXSize {  get { return _x.VSize; } }
         public double VYSize {  get { return _y.VSize; } }
         public int CXSize { get { return _x.CSize; } }
-        public int CYSize { get { return _y.CSize; } }
+        public int CYSize { get { return Math.Abs(_y.CSize); } }
 
         public RangeD VXRange {  get { return _x.VRange;  } }
 

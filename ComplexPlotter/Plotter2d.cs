@@ -29,7 +29,9 @@ namespace ComplexPlotter
 
         // rubber band selection
         private Bitmap _saveImage;
-        Point? _bandStart;
+        private bool _band;
+        private Point _mouseDownAt;
+        private Point _mouseMoveAt;
 
         Shape _shape;
 
@@ -57,10 +59,10 @@ namespace ComplexPlotter
             _plot.MouseDown += new MouseEventHandler(OnMouseDown);
             _plot.MouseUp += new MouseEventHandler(OnMouseUp);
             _plot.MouseMove += new MouseEventHandler(OnMouseMove);
-            _bandStart = null;
 
-            _shape = new Grid(0.0, xmax / 2.0, 4, 0.0, ymax / 2.0, 4);
-            //_shape = new Line(new PointD(1.0, 1.0), new PointD(2.0, 6.0));
+            Point oc =_vr.VToC(_origin);
+            _shape = new Grid(oc.X, oc.X + _vr.CXSize / 4, 4, oc.Y, oc.Y - _vr.CYSize / 4, 4);
+            //_shape = new Line(oc, new Point(oc.X + _vr.CXSize / 4, oc.Y - _vr.CYSize / 4));
 
             //_plot.Refresh();
             Replot();
@@ -119,55 +121,62 @@ namespace ComplexPlotter
 
         private void OnMouseDown(object sender, MouseEventArgs e)
         {
+            PlotterGraphics pg = new PlotterGraphics(_vr, _plot.CreateGraphics());
+            _mouseDownAt = e.Location;
+            _mouseMoveAt = e.Location;
+
             if (Control.ModifierKeys == Keys.Shift)
             {
                 _saveImage = new Bitmap(_plot.Width, _plot.Height);
                 _plot.DrawToBitmap(_saveImage, new Rectangle(0, 0, _plot.Width, _plot.Height));
-                _bandStart = e.Location;
+                _band = true;
             }
             else if (Control.ModifierKeys == Keys.None)
             {
-
-                // if (_shape.DragStart(_vr.CToV(e.Location), _vr.CXLenToV(5), _vr.CYLenToV(5)))
-                if (_shape.CanSelect(_vr.CToV(e.Location), _vr.VXSize / 100, _vr.VYSize / 100))
-                {
-                    Logger.Info("Close");
-                }
-                else
-                {
-                    Logger.Info("-");
-                }
+                if (_shape.CursorIsOn(pg, e.Location, _vr.CXSize / 100, _vr.CYSize / 100))
+                    _shape.Select(pg);
             }
         }
 
         private void OnMouseMove(object sender, MouseEventArgs e)
         {
-            if (_bandStart.HasValue)
+            if (_band)
             {
                 // clear previous band
-                Graphics g = _plot.CreateGraphics();
-                g.DrawImage(_saveImage, 0, 0);
-                g.DrawRectangle(new Pen(Color.Black, 1.0f),
-                    _bandStart.Value.X, _bandStart.Value.Y,
-                    e.Location.X - _bandStart.Value.X, e.Location.Y - _bandStart.Value.Y);
+                PlotterGraphics pg = new PlotterGraphics(_vr, _plot.CreateGraphics());
+                pg.Graphics.DrawImage(_saveImage, 0, 0);
+                pg.Graphics.DrawRectangle(new Pen(Color.Black, 1.0f),
+                    _mouseDownAt.X, _mouseDownAt.Y,
+                    e.Location.X - _mouseDownAt.X, e.Location.Y - _mouseDownAt.Y);
+            }
+            else
+            {
+                if (_shape.Selected)
+                {
+                    PlotterGraphics pg = new PlotterGraphics(_vr, _plot.CreateGraphics());
+                    Point offset = new Point(e.Location.X - _mouseMoveAt.X, e.Location.Y - _mouseMoveAt.Y);
+                    _shape.Move(pg, offset);
+                    _mouseMoveAt = e.Location;
+                    ReplotG(pg);
+                }
             }
         }
         private void OnMouseUp(object sender, MouseEventArgs e)
         {
-            if (_bandStart.HasValue)
+            if (_band)
             {
                 PlotterGraphics pg = new PlotterGraphics(_vr, _plot.CreateGraphics());
                 pg.Graphics.DrawImage(_saveImage, 0, 0);
 
                 // re-calculate x axis
-                int l = _bandStart.Value.X;
+                int l = _mouseDownAt.X;
                 int u = e.X;
                 if (l > u) (l, u) = (u, l);
                 _axes.XAxis.Initialise(_vr.XCToV(l), _vr.XCToV(u), _origin.X, _noOfTicks);
                 _vr.SetXExtent(new RangeD(_axes.XAxis.Min, _axes.XAxis.Max));
 
                 // re-calculate y axis
-                l = _bandStart.Value.Y;
+                l = _mouseDownAt.Y;
                 u = e.Y;
                 if (l > u) (l, u) = (u, l);
                 _axes.YAxis.Initialise(_vr.YCToV(u), _vr.YCToV(l), _origin.Y, _noOfTicks);
@@ -176,7 +185,13 @@ namespace ComplexPlotter
                 // redraw
                 ReplotG(pg);
 
-                _bandStart = null;
+                _band = false;
+            }
+            else
+            {
+                PlotterGraphics pg = new PlotterGraphics(_vr, _plot.CreateGraphics());
+                _shape.Deselect(pg);
+                ReplotG(pg);
             }
         }
     }
