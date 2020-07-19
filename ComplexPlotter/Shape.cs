@@ -89,7 +89,6 @@ namespace ComplexPlotter
             // is pp within tolerance of the line c0 (origin) to c1p
             return pp.Real > -dxp && pp.Real < c1p.Real + dxp &&
                    pp.Imaginary > -dyp && pp.Imaginary < c1p.Imaginary + dyp;
-
         }
 
         public override void Select(PlotterGraphics pg)

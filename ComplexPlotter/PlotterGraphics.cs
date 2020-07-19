@@ -56,7 +56,7 @@ namespace ComplexPlotter
 
         public void Clear()
         {
-            _graphics.FillRectangle(SolidWhiteBrush(), _vr.CXMin, _vr.CYMax, _vr.CXMax, _vr.CYMin);
+            _graphics.Clear(Color.White);
         }
 
         public Pen NarrowPen()

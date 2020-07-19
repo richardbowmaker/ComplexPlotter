@@ -19,7 +19,7 @@ namespace ComplexPlotter
     class Plotter2d
     {
 
-        private Control _plot;
+        private PictureBox _plot;
         private PointD _origin;     // the axis origin as a complex number, starts at (0,0)
         private MathFunction _f;
         private ViewReckoner _vr;
@@ -28,14 +28,17 @@ namespace ComplexPlotter
         private int _border = 10;
 
         // rubber band selection
-        private Bitmap _saveImage;
         private bool _band;
         private Point _mouseDownAt;
         private Point _mouseMoveAt;
 
+        // image planes
+        private Bitmap _mainImage;
+        private Bitmap _overlayImage;
+
         Shape _shape;
 
-        public Plotter2d(Control plot, double xExtent, double yExtent)
+        public Plotter2d(PictureBox plot, double xExtent, double yExtent)
         {
             double xmin = -xExtent / 2.0;
             double xmax = xExtent / 2.0;
@@ -55,6 +58,10 @@ namespace ComplexPlotter
             _axes.XAxis = new Axis(xmin, xmax, _origin.X, _noOfTicks);
             _axes.YAxis = new Axis(ymin, ymax, _origin.Y, _noOfTicks);
 
+            // image planes
+            _mainImage = new Bitmap(_plot.Width, _plot.Height);
+            _overlayImage = new Bitmap(_plot.Width, _plot.Height);
+
             // rubber band
             _plot.MouseDown += new MouseEventHandler(OnMouseDown);
             _plot.MouseUp += new MouseEventHandler(OnMouseUp);
@@ -73,19 +80,40 @@ namespace ComplexPlotter
         private double XSize { get { return _vr.VXSize; } }
         private double YSize { get { return _vr.VYSize; } }
 
+        private PlotterGraphics MainGraphics()
+        {
+            return new PlotterGraphics(_vr, Graphics.FromImage(_mainImage));
+        }
+
+        private PlotterGraphics OverlayGraphics()
+        {
+            return new PlotterGraphics(_vr, Graphics.FromImage(_overlayImage));
+        }
+
+        private void ClearOverlay()
+        {
+            _overlayImage = new Bitmap(_plot.Width, _plot.Height);
+        }
+
+        public void DisplayImage()
+        {
+            Bitmap img = new Bitmap(_plot.Width, _plot.Height);
+            Graphics g = Graphics.FromImage(img);
+            g.DrawImage(_mainImage, new Rectangle(0, 0, _plot.Width, _plot.Height));
+            g.DrawImage(_overlayImage, new Rectangle(0, 0, _plot.Width, _plot.Height));
+            _plot.Image = img;
+        }
+
         private void OnPaint(object sender, PaintEventArgs e)
         {
-            PlotterGraphics pg = new PlotterGraphics(_vr, e.Graphics);
-            ReplotG(pg);
+            Graphics g = e.Graphics;
+            g.Clear(Color.White);
+            g.DrawImage(_mainImage, 0, 0);
+            g.DrawImage(_overlayImage, 0, 0);
         }
 
         public ViewReckoner View { get { return _vr; } }
 
-        public void SetXExtent(RangeD ex)
-        {
-            _vr.SetXExtent(ex);
-            Replot();
-        }
         public void SetYExtent(RangeD ex)
         {
             // recalculate Y axis, update the view extent and redraw
@@ -94,29 +122,20 @@ namespace ComplexPlotter
             Replot();
         }
 
-        public void Clear()
-        {
-            PlotterGraphics pg = new PlotterGraphics(_vr, _plot.CreateGraphics());
-            ClearG(pg);
-        }
-
-        private void ClearG(PlotterGraphics pg)
-        {
-            pg.Clear();
-        }
-
         public void Replot()
         {
-            PlotterGraphics pg = new PlotterGraphics(_vr, _plot.CreateGraphics());
-            ReplotG(pg);
-        }
-
-        public void ReplotG(PlotterGraphics pg)
-        {
-            ClearG(pg);
+            PlotterGraphics pg = MainGraphics();
+            pg.Clear();
             _axes.Draw(pg);
-            _shape.Draw(pg);
             if (_f != null) _f.Draw(pg);
+            pg.Graphics.Dispose();
+
+            pg = OverlayGraphics();
+            _shape.Draw(pg);
+            pg.Graphics.Dispose();
+
+
+            DisplayImage();
         }
 
         private void OnMouseDown(object sender, MouseEventArgs e)
@@ -127,8 +146,6 @@ namespace ComplexPlotter
 
             if (Control.ModifierKeys == Keys.Shift)
             {
-                _saveImage = new Bitmap(_plot.Width, _plot.Height);
-                _plot.DrawToBitmap(_saveImage, new Rectangle(0, 0, _plot.Width, _plot.Height));
                 _band = true;
             }
             else if (Control.ModifierKeys == Keys.None)
@@ -143,21 +160,23 @@ namespace ComplexPlotter
             if (_band)
             {
                 // clear previous band
-                PlotterGraphics pg = new PlotterGraphics(_vr, _plot.CreateGraphics());
-                pg.Graphics.DrawImage(_saveImage, 0, 0);
+                ClearOverlay();
+                PlotterGraphics pg = OverlayGraphics();
                 pg.Graphics.DrawRectangle(new Pen(Color.Black, 1.0f),
                     _mouseDownAt.X, _mouseDownAt.Y,
                     e.Location.X - _mouseDownAt.X, e.Location.Y - _mouseDownAt.Y);
+                DisplayImage();
             }
             else
             {
                 if (_shape.Selected)
                 {
-                    PlotterGraphics pg = new PlotterGraphics(_vr, _plot.CreateGraphics());
+                    ClearOverlay();
+                    PlotterGraphics pg = OverlayGraphics();
                     Point offset = new Point(e.Location.X - _mouseMoveAt.X, e.Location.Y - _mouseMoveAt.Y);
                     _shape.Move(pg, offset);
+                    DisplayImage();
                     _mouseMoveAt = e.Location;
-                    ReplotG(pg);
                 }
             }
         }
@@ -165,8 +184,8 @@ namespace ComplexPlotter
         {
             if (_band)
             {
-                PlotterGraphics pg = new PlotterGraphics(_vr, _plot.CreateGraphics());
-                pg.Graphics.DrawImage(_saveImage, 0, 0);
+                // clear the rubber band
+                ClearOverlay();
 
                 // re-calculate x axis
                 int l = _mouseDownAt.X;
@@ -183,15 +202,15 @@ namespace ComplexPlotter
                 _vr.SetYExtent(new RangeD(_axes.YAxis.Min, _axes.YAxis.Max));
 
                 // redraw
-                ReplotG(pg);
-
+                Replot();
                 _band = false;
             }
             else
             {
-                PlotterGraphics pg = new PlotterGraphics(_vr, _plot.CreateGraphics());
+                ClearOverlay();
+                PlotterGraphics pg = OverlayGraphics();
                 _shape.Deselect(pg);
-                ReplotG(pg);
+                DisplayImage();
             }
         }
     }
