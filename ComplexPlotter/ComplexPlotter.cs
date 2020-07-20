@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Numerics;
+using ComlexPlotter;
 
 namespace ComplexPlotter
 {
@@ -20,16 +21,17 @@ namespace ComplexPlotter
 
         private Plotter2d _domain;
         private Plotter2d _coDomain;
+        private PlotComplex _complex;
 
         private void ComplexPlotter_Load(object sender, EventArgs e)
         {
-            _domain = new Plotter2d(picDomain, 20, 20);
+            //_domain = new Plotter2d(picDomain, 20, 20, null);
             //_coDomain = new Plotter2d(picCoDomain, 20, 20);
 
+            _complex = new PlotComplex(picDomain, picCoDomain);
 
-            Logger.TheListBox = lstLogger;
-            Logger.Info("Complex plotter");
 
+    
         }
 
         private void button1_Click(object sender, EventArgs e)

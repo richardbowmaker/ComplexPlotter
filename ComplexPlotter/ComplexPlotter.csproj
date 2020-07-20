@@ -49,6 +49,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Axis.cs" />
+    <Compile Include="ComplexMathFunction.cs" />
     <Compile Include="ComplexPlotter.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -57,8 +58,8 @@
     </Compile>
     <Compile Include="Logger.cs" />
     <Compile Include="MathFunction.cs" />
+    <Compile Include="PlotComplex.cs" />
     <Compile Include="Plotter2d.cs" />
-    <Compile Include="PlotterComplex.cs" />
     <Compile Include="PlotterGraphics.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -27,48 +27,8 @@ namespace ComplexPlotter
         Complex CVal;       // Codmain value
     }
 
-    class ComplexO
-    {
-        private Complex? _value;
+ 
 
-        public ComplexO()
-        {
-        }
-
-        public ComplexO(Complex value)
-        {
-            _value = value;
-        }
-
-        public ComplexO(PointD value)
-        {
-            _value = new Complex(value.X, value.Y);
-        }
-        public ComplexO(double x, double y)
-        {
-            _value = new Complex(x, y);
-        }
-
-        public bool Discontinuity {  get { return !_value.HasValue; } }
-
-        public PointD ToPointD()
-        {
-            if (_value.HasValue)
-                return new PointD(_value.Value.Real, _value.Value.Imaginary);
-            else
-                return new PointD(0.0, 0.0);
-        }
-
-        public static implicit operator Complex(ComplexO c) => c._value.Value;
-
-        public override string ToString()
-        {
-            if (Discontinuity)
-                return "(-,-)";
-            else
-                return String.Format("({0},{1})", _value.Value.Real, _value.Value.Imaginary);
-        }
-    }
 
     abstract class MathFunction : IDrawable
     {

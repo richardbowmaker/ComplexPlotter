@@ -11,7 +11,7 @@ namespace ComplexPlotter
 {
     abstract class Shape
     {
-        public abstract List<ComplexO> Values();
+        public abstract List<PointDO> Values();
 
         public virtual bool CursorIsOn(PlotterGraphics pg, Point p, int xtol, int ytol) { return false; }
         public virtual void Select(PlotterGraphics pg) { }
@@ -43,9 +43,16 @@ namespace ComplexPlotter
             _p1 = p1;
         }
 
-        public override List<ComplexO> Values()
+        public override List<PointDO> Values()
         {
-            List<ComplexO> values = new List<ComplexO>();
+            List<PointDO> values = new List<PointDO>();
+
+            double xd = (_p1.X - _p0.X) / 10.0;
+            double yd = (_p1.Y - _p0.Y) / 10.0;
+
+            for (int i = 0; i < 10; ++i)
+                values.Add(new PointDO(_p0.X * xd, _p0.Y * yd));
+
             return values;
         }
 
@@ -126,9 +133,9 @@ namespace ComplexPlotter
             _lines.Add(new Line(p1, p2));
         }
 
-        public override List<ComplexO> Values()
+        public override List<PointDO> Values()
         {
-            List<ComplexO> values = new List<ComplexO>();
+            List<PointDO> values = new List<PointDO>();
             return values;
         }
 

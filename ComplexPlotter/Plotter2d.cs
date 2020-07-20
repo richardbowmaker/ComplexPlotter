@@ -8,17 +8,69 @@ using System.Drawing;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Resources;
 using System.Numerics;
+using System.Data;
 
 namespace ComplexPlotter
 {
     interface IDrawable
     {
-        void Draw(PlotterGraphics g);
+        void Draw(PlotterGraphics pg);
+    }
+
+    interface IPlotter
+    {
+        void PlotPoints(List<PointDO> points);
+    }
+
+    class ImagePlane
+    {
+        private Control _control;
+        private Bitmap _image;
+        private Graphics _graphics;
+
+        public ImagePlane(Control c)
+        {
+            _control = c;
+            _image = null;
+            _graphics = null;
+        }
+
+        public void Clear()
+        {
+            _graphics = null;
+            _image = null;
+        }
+
+        private void Initialise()
+        {
+            if (_graphics == null)
+            {
+                _image = new Bitmap(_control.Width, _control.Height);
+                _graphics = System.Drawing.Graphics.FromImage(_image);
+            }
+        }
+
+        public Graphics Graphics
+        {
+            get
+            {
+                Initialise();
+                return _graphics;
+            }
+        }
+
+        public Bitmap Image
+        {
+            get
+            {
+                Initialise();
+                return _image;
+            }
+        }
     }
 
     class Plotter2d
     {
-
         private PictureBox _plot;
         private PointD _origin;     // the axis origin as a complex number, starts at (0,0)
         private MathFunction _f;
@@ -33,12 +85,15 @@ namespace ComplexPlotter
         private Point _mouseMoveAt;
 
         // image planes
-        private Bitmap _mainImage;
-        private Bitmap _overlayImage;
+        private ImagePlane _mainImage;
+        private ImagePlane _bandImage;
+        private ImagePlane _mapperImage;
 
-        Shape _shape;
+        private Shape _mapper;
 
-        public Plotter2d(PictureBox plot, double xExtent, double yExtent)
+        IPlotter _plotter;
+
+        public Plotter2d(PictureBox plot, double xExtent, double yExtent, IPlotter plotter)
         {
             double xmin = -xExtent / 2.0;
             double xmax = xExtent / 2.0;
@@ -46,6 +101,7 @@ namespace ComplexPlotter
             double ymax = yExtent / 2.0;
 
             _plot = plot;
+            _plotter = plotter;
             _origin = new PointD(0.0, 0.0); 
             _vr = new ViewReckoner(
                 _border, plot.Width - _border, plot.Height - _border, _border, 
@@ -58,58 +114,57 @@ namespace ComplexPlotter
             _axes.XAxis = new Axis(xmin, xmax, _origin.X, _noOfTicks);
             _axes.YAxis = new Axis(ymin, ymax, _origin.Y, _noOfTicks);
 
-            // image planes
-            _mainImage = new Bitmap(_plot.Width, _plot.Height);
-            _overlayImage = new Bitmap(_plot.Width, _plot.Height);
-
             // rubber band
             _plot.MouseDown += new MouseEventHandler(OnMouseDown);
             _plot.MouseUp += new MouseEventHandler(OnMouseUp);
             _plot.MouseMove += new MouseEventHandler(OnMouseMove);
 
-            Point oc =_vr.VToC(_origin);
-            _shape = new Grid(oc.X, oc.X + _vr.CXSize / 4, 4, oc.Y, oc.Y - _vr.CYSize / 4, 4);
-            //_shape = new Line(oc, new Point(oc.X + _vr.CXSize / 4, oc.Y - _vr.CYSize / 4));
+            // create image planes
+            _mainImage = new ImagePlane(_plot);
+            _bandImage = new ImagePlane(_plot);
+            _mapperImage = new ImagePlane(_plot);
 
-            //_plot.Refresh();
+            Point oc =_vr.VToC(_origin);
+            //_mapper = new Grid(oc.X, oc.X + _vr.CXSize / 4, 4, oc.Y, oc.Y - _vr.CYSize / 4, 4);
+            _mapper = new Line(oc, new Point(oc.X + _vr.CXSize / 4, oc.Y - _vr.CYSize / 4));
+
             Replot();
         }
 
         public MathFunction f {  set { _f = value; }  get { return _f; } }
 
+        public void PlotPoints(List<PointDO> points)
+        {
+            _mainImage.Clear();
+            PlotterGraphics pg = new PlotterGraphics(_vr, _mainImage.Graphics);
+            _axes.Draw(pg);
+
+            PointDO p0 = new PointDO();
+            foreach (PointDO p in points)
+            {
+                if (!p0.Discontinuity && !p.Discontinuity)
+                    pg.DrawLineV(p0.PointD, p.PointD);
+                p0 = p;
+            }
+            DisplayImage();
+        }
+
         private double XSize { get { return _vr.VXSize; } }
         private double YSize { get { return _vr.VYSize; } }
 
-        private PlotterGraphics MainGraphics()
-        {
-            return new PlotterGraphics(_vr, Graphics.FromImage(_mainImage));
-        }
-
-        private PlotterGraphics OverlayGraphics()
-        {
-            return new PlotterGraphics(_vr, Graphics.FromImage(_overlayImage));
-        }
-
-        private void ClearOverlay()
-        {
-            _overlayImage = new Bitmap(_plot.Width, _plot.Height);
-        }
-
         public void DisplayImage()
         {
-            Bitmap img = new Bitmap(_plot.Width, _plot.Height);
-            Graphics g = Graphics.FromImage(img);
-            g.DrawImage(_mainImage, new Rectangle(0, 0, _plot.Width, _plot.Height));
-            g.DrawImage(_overlayImage, new Rectangle(0, 0, _plot.Width, _plot.Height));
-            _plot.Image = img;
+            Bitmap image = new Bitmap(_plot.Width, _plot.Height);
+            Graphics g = Graphics.FromImage(image);
+            g.DrawImage(_mainImage.Image, new Rectangle(0, 0, _plot.Width, _plot.Height));
+            g.DrawImage(_bandImage.Image, new Rectangle(0, 0, _plot.Width, _plot.Height));
+            g.DrawImage(_mapperImage.Image, new Rectangle(0, 0, _plot.Width, _plot.Height));
+            _plot.Image = image;
         }
 
         private void OnPaint(object sender, PaintEventArgs e)
         {
-            Graphics g = e.Graphics;
-            g.Clear(Color.White);
-            g.DrawImage(_mainImage, 0, 0);
-            g.DrawImage(_overlayImage, 0, 0);
+            DisplayImage();
         }
 
         public ViewReckoner View { get { return _vr; } }
@@ -124,16 +179,14 @@ namespace ComplexPlotter
 
         public void Replot()
         {
-            PlotterGraphics pg = MainGraphics();
-            pg.Clear();
-            _axes.Draw(pg);
-            if (_f != null) _f.Draw(pg);
-            pg.Graphics.Dispose();
+            // main image plane
+            _mainImage.Clear();
+            _axes.Draw(new PlotterGraphics(_vr, _mainImage.Graphics));
+            if (_f != null) _f.Draw(new PlotterGraphics(_vr, _mainImage.Graphics));
 
-            pg = OverlayGraphics();
-            _shape.Draw(pg);
-            pg.Graphics.Dispose();
-
+            // the mapper plane
+            _mapperImage.Clear();
+            _mapper.Draw(new PlotterGraphics(_vr, _mapperImage.Graphics));
 
             DisplayImage();
         }
@@ -150,8 +203,17 @@ namespace ComplexPlotter
             }
             else if (Control.ModifierKeys == Keys.None)
             {
-                if (_shape.CursorIsOn(pg, e.Location, _vr.CXSize / 100, _vr.CYSize / 100))
-                    _shape.Select(pg);
+                if (_mapper.CursorIsOn(pg, e.Location, _vr.CXSize / 100, _vr.CYSize / 100))
+                    _mapper.Select(pg);
+                else
+                {
+                    //if (_plotter != null)
+                    //{
+                    //    List<PointDO> ps = new List<PointDO>();
+                    //    ps.Add(new PointDO(_vr.CToV(e.Location)));
+                    //    _plotter.PlotPoints(ps);
+                    //}
+                }
             }
         }
 
@@ -160,21 +222,26 @@ namespace ComplexPlotter
             if (_band)
             {
                 // clear previous band
-                ClearOverlay();
-                PlotterGraphics pg = OverlayGraphics();
-                pg.Graphics.DrawRectangle(new Pen(Color.Black, 1.0f),
-                    _mouseDownAt.X, _mouseDownAt.Y,
-                    e.Location.X - _mouseDownAt.X, e.Location.Y - _mouseDownAt.Y);
+                _bandImage.Clear();
+
+                // draw new band
+                _bandImage.Graphics.
+                    DrawRectangle(new Pen(Color.Black, 1.0f),
+                        _mouseDownAt.X, _mouseDownAt.Y,
+                        e.Location.X - _mouseDownAt.X, e.Location.Y - _mouseDownAt.Y);
                 DisplayImage();
             }
             else
             {
-                if (_shape.Selected)
+                if (_mapper.Selected)
                 {
-                    ClearOverlay();
-                    PlotterGraphics pg = OverlayGraphics();
+                    // clear previous mapper
+                    _mapperImage.Clear();
+
+                    // draw mapper in new position
+                    PlotterGraphics pg = new PlotterGraphics(_vr, _mapperImage.Graphics);
                     Point offset = new Point(e.Location.X - _mouseMoveAt.X, e.Location.Y - _mouseMoveAt.Y);
-                    _shape.Move(pg, offset);
+                    _mapper.Move(pg, offset);
                     DisplayImage();
                     _mouseMoveAt = e.Location;
                 }
@@ -185,7 +252,7 @@ namespace ComplexPlotter
             if (_band)
             {
                 // clear the rubber band
-                ClearOverlay();
+                _bandImage.Clear();
 
                 // re-calculate x axis
                 int l = _mouseDownAt.X;
@@ -207,10 +274,13 @@ namespace ComplexPlotter
             }
             else
             {
-                ClearOverlay();
-                PlotterGraphics pg = OverlayGraphics();
-                _shape.Deselect(pg);
+                _mapperImage.Clear();
+                PlotterGraphics pg = new PlotterGraphics(_vr, _mapperImage.Graphics);
+                _mapper.Deselect(pg);
                 DisplayImage();
+
+                if (_plotter != null)
+                    _plotter.PlotPoints(_mapper.Values());
             }
         }
     }
