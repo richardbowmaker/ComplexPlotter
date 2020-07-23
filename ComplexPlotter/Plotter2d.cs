@@ -126,26 +126,28 @@ namespace ComplexPlotter
 
             Point oc =_vr.VToC(_origin);
             //_mapper = new Grid(oc.X, oc.X + _vr.CXSize / 4, 4, oc.Y, oc.Y - _vr.CYSize / 4, 4);
-            _mapper = new Line(oc, new Point(oc.X + _vr.CXSize / 4, oc.Y - _vr.CYSize / 4));
+            //_mapper = new Line(oc, new Point(oc.X + _vr.CXSize / 4, oc.Y - _vr.CYSize / 4));
 
             Replot();
         }
 
         public MathFunction f {  set { _f = value; }  get { return _f; } }
 
+        public PointD Origin {  get { return _origin; } }
+
+        public void SetMapper(Shape mapper)
+        {
+            _mapper = mapper;
+            _mapper.Draw(new PlotterGraphics(_vr, _mapperImage.Graphics));
+            DisplayImage();
+        }
+
         public void PlotPoints(List<PointDO> points)
         {
             _mainImage.Clear();
             PlotterGraphics pg = new PlotterGraphics(_vr, _mainImage.Graphics);
             _axes.Draw(pg);
-
-            PointDO p0 = new PointDO();
-            foreach (PointDO p in points)
-            {
-                if (!p0.Discontinuity && !p.Discontinuity)
-                    pg.DrawLineV(p0.PointD, p.PointD);
-                p0 = p;
-            }
+            pg.PlotPoints(points);
             DisplayImage();
         }
 
@@ -164,7 +166,8 @@ namespace ComplexPlotter
 
         private void OnPaint(object sender, PaintEventArgs e)
         {
-            DisplayImage();
+
+            //DisplayImage();
         }
 
         public ViewReckoner View { get { return _vr; } }
@@ -185,8 +188,11 @@ namespace ComplexPlotter
             if (_f != null) _f.Draw(new PlotterGraphics(_vr, _mainImage.Graphics));
 
             // the mapper plane
-            _mapperImage.Clear();
-            _mapper.Draw(new PlotterGraphics(_vr, _mapperImage.Graphics));
+            if (_mapper != null)
+            {
+                _mapperImage.Clear();
+                _mapper.Draw(new PlotterGraphics(_vr, _mapperImage.Graphics));
+            }
 
             DisplayImage();
         }
@@ -203,7 +209,7 @@ namespace ComplexPlotter
             }
             else if (Control.ModifierKeys == Keys.None)
             {
-                if (_mapper.CursorIsOn(pg, e.Location, _vr.CXSize / 100, _vr.CYSize / 100))
+                if (_mapper != null && _mapper.CursorIsOn(pg, e.Location, _vr.CXSize / 100))
                     _mapper.Select(pg);
                 else
                 {
@@ -233,7 +239,7 @@ namespace ComplexPlotter
             }
             else
             {
-                if (_mapper.Selected)
+                if (_mapper != null && _mapper.Selected)
                 {
                     // clear previous mapper
                     _mapperImage.Clear();
@@ -244,6 +250,9 @@ namespace ComplexPlotter
                     _mapper.Move(pg, offset);
                     DisplayImage();
                     _mouseMoveAt = e.Location;
+
+                    if (_plotter != null)
+                        _plotter.PlotPoints(_mapper.Values(_vr));
                 }
             }
         }
@@ -274,13 +283,16 @@ namespace ComplexPlotter
             }
             else
             {
-                _mapperImage.Clear();
-                PlotterGraphics pg = new PlotterGraphics(_vr, _mapperImage.Graphics);
-                _mapper.Deselect(pg);
-                DisplayImage();
+                if (_mapper != null && _mapper.Selected)
+                {
+                    _mapperImage.Clear();
+                    PlotterGraphics pg = new PlotterGraphics(_vr, _mapperImage.Graphics);
+                    _mapper.Deselect(pg);
+                    DisplayImage();
 
-                if (_plotter != null)
-                    _plotter.PlotPoints(_mapper.Values());
+                    if (_plotter != null)
+                        _plotter.PlotPoints(_mapper.Values(_vr));
+                }
             }
         }
     }

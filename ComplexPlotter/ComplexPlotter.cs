@@ -26,7 +26,7 @@ namespace ComplexPlotter
         private void ComplexPlotter_Load(object sender, EventArgs e)
         {
             //_domain = new Plotter2d(picDomain, 20, 20, null);
-            //_coDomain = new Plotter2d(picCoDomain, 20, 20);
+            //_coDomain = new Plotter2d(picCoDomain, 20, 20, null);
 
             _complex = new PlotComplex(picDomain, picCoDomain);
 

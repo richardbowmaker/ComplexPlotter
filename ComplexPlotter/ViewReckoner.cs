@@ -70,6 +70,10 @@ namespace ComplexPlotter
         {
             return new PointD(_x.CToV(p.X), _y.CToV(p.Y));
         }
+        public PointD CToV(PointD p)
+        {
+            return new PointD(_x.CToV(p.X), _y.CToV(p.Y));
+        }
 
         public int VXLenToC(double xl)
         {
@@ -110,10 +114,9 @@ namespace ComplexPlotter
             _y.Zoom(ex.Min, ex.Max);
         }
 
-        // Zooms into region specified by control co-ords
-        public void Zoom(Point p1, Point p2)
+        public bool CInView(Point p)
         {
-            
+            return (_x.CInView(p.X) && _x.CInView(p.Y));
         }
     }
 
@@ -162,6 +165,10 @@ namespace ComplexPlotter
         {
             return _v1 + ((double)(c - _c1) * _scale);
         }
+        public double CToV(double c)
+        {
+            return _v1 + ((c - (double)_c1) * _scale);
+        }
 
         public int VLenToC(double v)
         {
@@ -199,9 +206,17 @@ namespace ComplexPlotter
         public double VSize { get { return _v2 - _v1;  } }
         public int CSize { get { return _c2 - _c1;  } }
 
-        public bool InView(double v)
+        public bool VInView(double v)
         {
             return v >= _v1 && v <= _v2;
+        }
+
+        public bool CInView(int c)
+        {
+            if (_c1 < _c2)
+                return (c >= _c1 && c <= _c2);
+            else
+                return (c <= _c1 && c >= _c2);
         }
 
         public static bool Test()
