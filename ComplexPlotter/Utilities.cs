@@ -38,6 +38,33 @@ namespace ComplexPlotter
         {
             return new Complex(X, Y);
         }
+
+        public PointD Add(PointD p)
+        {
+            return new PointD(X + p.X, Y + p.Y);
+        }
+        public PointD Subtract(PointD p)
+        {
+            return new PointD(X - p.X, Y - p.Y);
+        }
+
+        public PointD Mult(PointD p)
+        {
+            Complex c = Complex.Multiply(ToComplex(), p.ToComplex());
+            return new PointD(c);
+        }
+
+        public PointD Power(PointD p)
+        {
+            Complex c = Complex.Pow(ToComplex(), p.ToComplex());
+            return new PointD(c);
+        }
+
+        public PointD Power(double p)
+        {
+            Complex c = Complex.Pow(ToComplex(), new Complex(p, 0));
+            return new PointD(c);
+        }
     }
 
     class PointDO
@@ -74,6 +101,9 @@ namespace ComplexPlotter
             _value = new PointD(x, y);
             _color = color;
         }
+
+        public double X {  get { return _value.X; } }
+        public double Y {  get { return _value.Y; } }
 
         public bool Discontinuity { get { return _value == null; } }
 

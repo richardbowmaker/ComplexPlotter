@@ -20,6 +20,7 @@ namespace ComplexPlotter
     interface IPlotter
     {
         void PlotPoints(List<PointDO> points);
+        void AtPoint(PointD point);
     }
 
     class ImagePlane
@@ -255,6 +256,9 @@ namespace ComplexPlotter
                         _plotter.PlotPoints(_mapper.Values(_vr));
                 }
             }
+
+            if (_plotter != null)
+                _plotter.AtPoint(_vr.CToV(e.Location));
         }
         private void OnMouseUp(object sender, MouseEventArgs e)
         {

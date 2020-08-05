@@ -28,11 +28,16 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.lstLogger = new System.Windows.Forms.ListBox();
             this.button1 = new System.Windows.Forms.Button();
             this.butSinX = new System.Windows.Forms.Button();
             this.picDomain = new System.Windows.Forms.PictureBox();
             this.picCoDomain = new System.Windows.Forms.PictureBox();
+            this.txtCoords = new System.Windows.Forms.TextBox();
+            this.butCircle = new System.Windows.Forms.Button();
+            this.plotTimer = new System.Windows.Forms.Timer(this.components);
+            this.butDomCodomSame = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.picDomain)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.picCoDomain)).BeginInit();
             this.SuspendLayout();
@@ -85,11 +90,46 @@
             this.picCoDomain.TabIndex = 6;
             this.picCoDomain.TabStop = false;
             // 
+            // txtCoords
+            // 
+            this.txtCoords.Location = new System.Drawing.Point(88, 215);
+            this.txtCoords.Name = "txtCoords";
+            this.txtCoords.Size = new System.Drawing.Size(356, 26);
+            this.txtCoords.TabIndex = 7;
+            // 
+            // butCircle
+            // 
+            this.butCircle.Location = new System.Drawing.Point(505, 53);
+            this.butCircle.Name = "butCircle";
+            this.butCircle.Size = new System.Drawing.Size(152, 54);
+            this.butCircle.TabIndex = 8;
+            this.butCircle.Text = "Circle at origin";
+            this.butCircle.UseVisualStyleBackColor = true;
+            this.butCircle.Click += new System.EventHandler(this.butCircle_Click);
+            // 
+            // plotTimer
+            // 
+            this.plotTimer.Interval = 50;
+            this.plotTimer.Tick += new System.EventHandler(this.plotTimer_Tick);
+            // 
+            // butDomCodomSame
+            // 
+            this.butDomCodomSame.Location = new System.Drawing.Point(520, 148);
+            this.butDomCodomSame.Name = "butDomCodomSame";
+            this.butDomCodomSame.Size = new System.Drawing.Size(136, 42);
+            this.butDomCodomSame.TabIndex = 9;
+            this.butDomCodomSame.Text = "Match Axis";
+            this.butDomCodomSame.UseVisualStyleBackColor = true;
+            this.butDomCodomSame.Click += new System.EventHandler(this.butDomCodomSame_Click);
+            // 
             // ComplexPlotter
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1792, 1367);
+            this.Controls.Add(this.butDomCodomSame);
+            this.Controls.Add(this.butCircle);
+            this.Controls.Add(this.txtCoords);
             this.Controls.Add(this.picCoDomain);
             this.Controls.Add(this.picDomain);
             this.Controls.Add(this.butSinX);
@@ -102,6 +142,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.picDomain)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.picCoDomain)).EndInit();
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
@@ -111,6 +152,10 @@
         private System.Windows.Forms.Button butSinX;
         private System.Windows.Forms.PictureBox picDomain;
         private System.Windows.Forms.PictureBox picCoDomain;
+        private System.Windows.Forms.TextBox txtCoords;
+        private System.Windows.Forms.Button butCircle;
+        private System.Windows.Forms.Timer plotTimer;
+        private System.Windows.Forms.Button butDomCodomSame;
     }
 }
 
